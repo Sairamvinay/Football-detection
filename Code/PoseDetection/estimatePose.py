@@ -34,9 +34,9 @@ mapIdx = [[31,32], [39,40], [33,34], [35,36], [41,42], [43,44],
           [47,48], [49,50], [53,54], [51,52], [55,56],
           [37,38], [45,46]]
 
-colors = [ [0,100,255], [0,100,255], [0,255,255], [0,100,255], [0,255,255], [0,100,255],
-         [0,255,0], [255,200,100], [255,0,255], [0,255,0], [255,200,100], [255,0,255],
-         [0,0,255], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,0]]
+colors = [ [0,100,255], [0,255,255], [0,100,255], [255,0,0], [0,255,255], [0,100,255],
+         [255,0,0], [255,200,100], [255,0,255], [0,255,0], [255,200,100], [255,0,255],
+         [0,255, 0], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,0]]
 
 
 def getKeypoints(probMap, threshold=0.1):
@@ -179,7 +179,10 @@ def prune_candidates(candidates, last_keypoint, w):
         if d/w <= 0.15:
             new_candidates.append(candidates[i])
             new_distances.append(d)'''
-    distances, candidates = zip(*sorted(zip(distances, candidates)))
+    try:
+        distances, candidates = zip(*sorted(zip(distances, candidates)))
+    except:
+        return [(-1,-1)]
     return candidates
 
 t = time.time()
@@ -237,23 +240,26 @@ chunck_size = int(total_frames/desired_frames)
 frame_counter = chunck_size
 point_counter = -1
 previousKeypoint = []
-
+c = 0
 # Output in format n*m*2 with n frames, m key points, and an x,y position
 accepted_points = np.zeros((desired_frames, 13, 2))
 
-while cv2.waitKey(1) < 0:
+while point_counter < desired_frames-1:
     if frame_counter != chunck_size:
+        c += 1
         frame_counter += 1
         hasFrame, frame = cap.read()
         continue
 
-    frame_counter = 0
+    frame_counter = 1
     point_counter += 1
+    c += 1
 
     t = time.time()
     hasFrame, frame = cap.read()
     frameCopy = np.copy(frame)
     if not hasFrame:
+        print(c)
         cv2.waitKey()
         break
     frameWidth = frame.shape[1]
@@ -302,7 +308,7 @@ while cv2.waitKey(1) < 0:
         #order[0], order[last_hit] = order[last_hit], order[0]
         candidates = deepcopy(detected_keypoints[i])
         candidates = prune_candidates(candidates, previousKeypoint, frameWidth)
-        order = list(range(len(detected_keypoints[i])))
+        order = list(range(len(candidates)))
         while j < len(candidates):
             index = order[j]
             cv2.circle(frameClone, (candidates[index][0:2]), 8, colors[i], -1, cv2.LINE_AA)
@@ -314,8 +320,8 @@ while cv2.waitKey(1) < 0:
                 last_hit = index
                 previousKeypoint = candidates[index][0:2]
                 j += 1
-                accepted_points[point_counter, i, 0] = candidates[index][0] - W/2
-                accepted_points[point_counter, i, 1] = candidates[index][1] - H/2
+                accepted_points[point_counter, i, 0] = (candidates[index][0] - frameWidth/2)/frameWidth
+                accepted_points[point_counter, i, 1] = (candidates[index][1] - frameHeight/2)/frameHeight
                 break
             # d - draw
             elif cont == 100:
@@ -325,8 +331,8 @@ while cv2.waitKey(1) < 0:
                 last_hit = index
                 previousKeypoint = [xd,yd]
                 j += 1
-                accepted_points[point_counter, i, 0] = xd - W/2
-                accepted_points[point_counter, i, 1] = yd - H/2
+                accepted_points[point_counter, i, 0] = (xd - frameWidth/2)/frameWidth
+                accepted_points[point_counter, i, 1] = (yd - frameHeight/2)/frameHeight
                 break
             # b - back
             elif cont == 98:
@@ -346,8 +352,6 @@ while cv2.waitKey(1) < 0:
                 continue
         i += 1
 
-print(accepted_points)
-
 np.save(os.path.basename(input_source).split('.')[0], accepted_points)
 keypointsMapping = ['Head', 'R-Sho', 'R-Elb', 'R-Wr', 'L-Sho', 'L-Elb', 'L-Wr', 'R-Hip', 'R-Knee', 'R-Ank', 'L-Hip', 'L-Knee', 'L-Ank']
 
@@ -359,16 +363,3 @@ json = json.dumps(d)
 f = open(os.path.basename(input_source).split('.')[0] + ".json","w")
 f.write(json)
 f.close()
-'''valid_pairs, invalid_pairs = getValidPairs(output)
-personwiseKeypoints = getPersonwiseKeypoints(valid_pairs, invalid_pairs)
-
-for i in range(17):
-    for n in range(len(personwiseKeypoints)):
-        index = personwiseKeypoints[n][np.array(POSE_PAIRS[i])]
-        if -1 in index:
-            continue
-        B = np.int32(keypoints_list[index.astype(int), 0])
-        A = np.int32(keypoints_list[index.astype(int), 1])
-        cv2.line(frameClone, (B[0], A[0]), (B[1], A[1]), colors[i], 3, cv2.LINE_AA)
-    cv2.imshow("Detected Pose" , frameClone)
-cv2.waitKey(0)'''
