@@ -1,4 +1,5 @@
-from final_animation import animate
+#from final_animation import animate
+from overall_animation import animate
 import numpy as np
 import math
 from scipy.interpolate import interp1d
