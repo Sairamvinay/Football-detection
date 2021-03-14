@@ -1,6 +1,5 @@
 import numpy as np
 import vtk
-import argparse
 from time import sleep
 import cv2
 
@@ -60,19 +59,6 @@ def drawJointLines(joint_pos_final):
 	ACTORS.append(plotLine(joint_pos_final[10],joint_pos_final[11],scalex=1,scaley=1)) # Left Hip -> Left Knee
 	ACTORS.append(plotLine(joint_pos_final[11],joint_pos_final[12],scalex=1,scaley=1)) # Left Knee -> Left Ankle
 
-
-
-parser = argparse.ArgumentParser(description='Animate skeleton from array')
-parser.add_argument("--np_file", default="FACup_Hit_2.npy", help="Input NPY file")
-parser.add_argument("--np_file_ball", default="scaled_FACup_Hit_2.npy", help="Input NPY file")
-parser.add_argument("--video", default="videos/FACup_Hit_2.mp4", help="Input VIDEO")
-
-colors = [ [0,100,255], [0,255,255], [0,100,255], [255,0,0], [0,255,255], [0,100,255],
-		[255,0,0], [255,200,100], [255,0,255], [0,255,0], [255,200,100], [255,0,255],
-		[0,255, 0], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,200]]
-
-ball_color = [255,110,180]
-
 BALL_RAD = 0.8
 
 MAGNIFY = 25.0
@@ -80,8 +66,6 @@ MAGNIFY_BALL = 10.0
 
 WINDOW_WT = 2500
 WINDOW_HT = 1200
-
-spheres = []
 
 ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
@@ -93,101 +77,109 @@ iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
 iren.Initialize()
 
-args = parser.parse_args()
+def animate(skeleton, ball, video):
 
-arr = np.load(args.np_file).tolist()
-ball_arr = np.load(args.np_file_ball).tolist()
-video_width, video_height = get_sizes(args.video)
+	colors = [ [0,100,255], [0,255,255], [0,100,255], [255,0,0], [0,255,255], [0,100,255],
+			[255,0,0], [255,200,100], [255,0,255], [0,255,0], [255,200,100], [255,0,255],
+			[0,255, 0], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,200]]
 
-print("Video size: ",video_width,',',video_height)
+	ball_color = [255,110,180]
 
-# get the actual video's frame size (H,W)
-# for that Render window's size: (H',W')
-# get the ht scale h = H'/H ; width scale w = W'/W
-# x' = x * w  ; y' = y * h for every joint and the ball
-# we also apply Magnification for every joint and ball seperately
+	spheres = []
 
-ratio_wt = WINDOW_WT / video_width
-ratio_ht = WINDOW_HT / video_height
+	arr = skeleton
+	ball_arr = ball
+	video_width, video_height = get_sizes(video)
+
+	print("Video size: ",video_width,',',video_height)
+
+	# get the actual video's frame size (H,W)
+	# for that Render window's size: (H',W')
+	# get the ht scale h = H'/H ; width scale w = W'/W
+	# x' = x * w  ; y' = y * h for every joint and the ball
+	# we also apply Magnification for every joint and ball seperately
+
+	ratio_wt = WINDOW_WT / video_width
+	ratio_ht = WINDOW_HT / video_height
 
 
-# this creates a 6x4 goal post
-plotLine([-3,-2,0],[-3,2,0]) #vertical left line
-plotLine([-3,2,0],[3,2,0]) #horizontal line
-plotLine([3,-2,0],[3,2,0]) #vertical right line
+	# this creates a 6x4 goal post
+	plotLine([-3,-2,0],[-3,2,0]) #vertical left line
+	plotLine([-3,2,0],[3,2,0]) #horizontal line
+	plotLine([3,-2,0],[3,2,0]) #vertical right line
 
 
-for time_iter,timestep in enumerate(arr[:-1]):
-	
-	joint_pos_final = []
-
-	for i,joint in enumerate(timestep):
+	for time_iter,timestep in enumerate(arr[:]):
 		
-		x_orig = joint[0]
-		y_orig = joint[1]
+		joint_pos_final = []
 
-		x = ratio_wt * x_orig * MAGNIFY
-		y = -1 * ratio_ht * y_orig * MAGNIFY #need to invert since the y is always set negative or we see an inverted goalie
-		joint_pos_final.append((x,y,0)) #get the positions of the joints
+		for i,joint in enumerate(timestep):
+			
+			x_orig = joint[0]
+			y_orig = joint[1]
 
-		if i == len(spheres):
-			source = vtk.vtkSphereSource()
-			source.SetCenter(x,y,0)
-			source.SetRadius(0.5)
-			spheres.append(source)
-			# mapper
-			mapper = vtk.vtkPolyDataMapper()
-			if vtk.VTK_MAJOR_VERSION <= 5:
-			    mapper.SetInput(source.GetOutput())
+			x = ratio_wt * x_orig * MAGNIFY
+			y = -1 * ratio_ht * y_orig * MAGNIFY #need to invert since the y is always set negative or we see an inverted goalie
+			joint_pos_final.append((x,y,0)) #get the positions of the joints
+
+			if i == len(spheres):
+				source = vtk.vtkSphereSource()
+				source.SetCenter(x,y,0)
+				source.SetRadius(0.5)
+				spheres.append(source)
+				# mapper
+				mapper = vtk.vtkPolyDataMapper()
+				if vtk.VTK_MAJOR_VERSION <= 5:
+				    mapper.SetInput(source.GetOutput())
+				else:
+				    mapper.SetInputConnection(source.GetOutputPort())
+
+				# actor
+				actor = vtk.vtkActor()
+				actor.GetProperty().SetColor(colors[i][0]/255, colors[i][1]/255, colors[i][2]/255)
+				actor.SetMapper(mapper)
+				ren.AddActor(actor)
 			else:
-			    mapper.SetInputConnection(source.GetOutputPort())
+				spheres[i].SetCenter(x,y,0)
 
-			# actor
-			actor = vtk.vtkActor()
-			actor.GetProperty().SetColor(colors[i][0]/255, colors[i][1]/255, colors[i][2]/255)
-			actor.SetMapper(mapper)
-			ren.AddActor(actor)
+
+		
+		drawJointLines(joint_pos_final)
+
+		x_ball_orig,y_ball_orig = ball_arr[time_iter]
+		
+		print("TIMESTEP ",time_iter)
+		
+		print("BEFORE SCALE")
+		print("BALL X:",x_ball_orig)
+		print("BALL Y:",y_ball_orig)
+
+		x_ball = x_ball_orig * ratio_wt * MAGNIFY
+		y_ball = y_ball_orig * ratio_ht * MAGNIFY
+
+		print("AFTER SCALE")
+		print("BALL X:",x_ball)
+		print("BALL Y:",y_ball)
+		print('-'*50)
+		
+
+		source.SetCenter(x_ball,y_ball,0)
+		source.SetRadius(BALL_RAD)
+		spheres.append(source)
+		# mapper
+		mapper = vtk.vtkPolyDataMapper()
+		if vtk.VTK_MAJOR_VERSION <= 5:
+		    mapper.SetInput(source.GetOutput())
 		else:
-			spheres[i].SetCenter(x,y,0)
+		    mapper.SetInputConnection(source.GetOutputPort())
 
+		# actor
+		actor.GetProperty().SetColor(ball_color[0]/255, ball_color[1]/255, ball_color[2]/255)
+		actor.SetMapper(mapper)
+		ren.AddActor(actor)
 
-	
-	drawJointLines(joint_pos_final)
-
-	x_ball_orig,y_ball_orig = ball_arr[time_iter]
-	
-	print("TIMESTEP ",time_iter)
-	
-	print("BEFORE SCALE")
-	print("BALL X:",x_ball_orig)
-	print("BALL Y:",y_ball_orig)
-
-	x_ball = x_ball_orig * ratio_wt * MAGNIFY_BALL
-	y_ball = y_ball_orig * ratio_ht * MAGNIFY_BALL
-
-	print("AFTER SCALE")
-	print("BALL X:",x_ball)
-	print("BALL Y:",y_ball)
-	print('-'*50)
-	
-
-	source.SetCenter(x_ball,y_ball,0)
-	source.SetRadius(BALL_RAD)
-	spheres.append(source)
-	# mapper
-	mapper = vtk.vtkPolyDataMapper()
-	if vtk.VTK_MAJOR_VERSION <= 5:
-	    mapper.SetInput(source.GetOutput())
-	else:
-	    mapper.SetInputConnection(source.GetOutputPort())
-
-	# actor
-	actor.GetProperty().SetColor(ball_color[0]/255, ball_color[1]/255, ball_color[2]/255)
-	actor.SetMapper(mapper)
-	ren.AddActor(actor)
-
-	# enable user interface interactor
-	renWin.Render()
-	iren.Render()
-	print("Enter to continue: ")
-	input()
+		# enable user interface interactor
+		renWin.Render()
+		iren.Render()
+		print("Enter to continue: ")
+		input()
