@@ -69,6 +69,7 @@ BALL_RAD = 0.8
 
 MAGNIFY = 25.0
 MAGNIFY_BALL = 10.0
+MAGNIFY_BALL_Y = 2.0
 
 WINDOW_WT = 2500
 WINDOW_HT = 1200
@@ -111,7 +112,7 @@ def animate(skeleton, ball, video):
 	ratio_ht = WINDOW_HT / video_height
 
 	X_OFFSET = 5
-	Y_OFFSET = 3
+	Y_OFFSET = 3.5#3
 	BRING_GOAL_DOWN = 1.5
 
 	# # this creates a 6x4 goal post
@@ -201,7 +202,7 @@ def animate(skeleton, ball, video):
 
 		x_ball = x_ball_orig * ratio_wt * MAGNIFY_BALL
 		if (time_iter < 2):
-			y_ball = y_ball_orig * ratio_ht * MAGNIFY_BALL
+			y_ball = y_ball_orig * ratio_ht * MAGNIFY_BALL_Y
 		else:
 			y_ball = abs(y_ball_orig * ratio_ht * MAGNIFY_BALL)
 
@@ -231,3 +232,21 @@ def animate(skeleton, ball, video):
 		iren.Render()
 		print("Enter to continue: ")
 		input()
+
+
+# def main():
+
+# 	npy_joint = "FACup_Hit_3.npy"
+# 	npy_ball = "scaled_FACup_Hit_3.npy"
+# 	video_file = "videos/FACup_Hit_3.mp4"
+
+# 	joint = np.load(npy_joint)
+# 	ball = np.load(npy_ball)
+
+# 	animate(joint[:-1],ball[:-1],video_file)
+
+
+# main()
+
+
+
