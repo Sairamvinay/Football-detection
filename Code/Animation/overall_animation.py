@@ -89,10 +89,10 @@ iren.Initialize()
 def animate(skeleton, ball, video):
 
 	colors = [ [0,100,255], [0,255,255], [0,100,255], [255,0,0], [0,255,255], [0,100,255],
-			[255,0,0], [255,200,100], [255,0,255], [0,255,0], [255,200,100], [255,0,255],
-			[0,255, 0], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,200]]
+			[255,0,0], [255,200,100], [255,0,255], [0,255,255], [255,200,100], [255,0,255],
+			[0,255,255], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,200]]
 
-	ball_color = [255,110,180]
+	ball_color = [255,255,255]#[255,110,180]
 
 	spheres = []
 
@@ -127,6 +127,8 @@ def animate(skeleton, ball, video):
 	x1,y1 = arr[0][4] #L-sho
 	x2,y2 = arr[0][1] #R-sho
 
+	mapper_joint = ['Head', 'R-Sho', 'R-Elb', 'R-Wr', 'L-Sho', 'L-Elb', 'L-Wr', 'R-Hip', 'R-Knee', 'R-Ank', 'L-Hip', 'L-Knee', 'L-Ank']
+
 	print("The shoulders are at same height: ",(y1==y2))
 	print("The width across shoulders: ",(x2-x1))
 
@@ -152,19 +154,26 @@ def animate(skeleton, ball, video):
 		joint_pos_final = []
 
 		for i,joint in enumerate(timestep):
-			
+
 			x_orig = joint[0]
 			y_orig = joint[1]
 
 			x = ratio_wt * x_orig * MAGNIFY
 			y = -1 * ratio_ht * y_orig * MAGNIFY #need to invert since the y is always set negative or we see an inverted goalie
+			#print("Joint ",mapper_joint[i]," Positions x: ",x," y: ",y, ' color: ',colors[i])
+
 			joint_pos_final.append((x,y,0)) #get the positions of the joints
 
-			if i == len(spheres):
+			#if i == len(spheres):
+			#add the first frame neatly alone
+			if time_iter == 0:
+				
 				source = vtk.vtkSphereSource()
 				source.SetCenter(x,y,0)
 				source.SetRadius(0.5)
+				source.Update()
 				spheres.append(source)
+
 				# mapper
 				mapper = vtk.vtkPolyDataMapper()
 				if vtk.VTK_MAJOR_VERSION <= 5:
@@ -177,11 +186,35 @@ def animate(skeleton, ball, video):
 				actor.GetProperty().SetColor(colors[i][0]/255, colors[i][1]/255, colors[i][2]/255)
 				actor.SetMapper(mapper)
 				ren.AddActor(actor)
+
+				#we need to re-add 
+				if i == 12:
+					source = vtk.vtkSphereSource()
+					source.SetCenter(x,y,0)
+					source.SetRadius(0.5)
+					source.Update()
+					spheres.append(source)
+
+					# mapper
+					mapper = vtk.vtkPolyDataMapper()
+					if vtk.VTK_MAJOR_VERSION <= 5:
+					    mapper.SetInput(source.GetOutput())
+					else:
+					    mapper.SetInputConnection(source.GetOutputPort())
+
+					# actor
+					actor = vtk.vtkActor()
+					actor.GetProperty().SetColor(colors[i][0]/255, colors[i][1]/255, colors[i][2]/255)
+					actor.SetMapper(mapper)
+					ren.AddActor(actor)
+
+			
 			else:
 				spheres[i].SetCenter(x,y,0)
 
 
-		
+		# print("After adding: spheres: ",len(spheres))		
+
 		drawJointLines(joint_pos_final)
 
 		# if time_iter != 0:
@@ -211,7 +244,7 @@ def animate(skeleton, ball, video):
 		print("BALL Y:",y_ball)
 		print('-'*50)
 		
-
+		source = vtk.vtkSphereSource()
 		source.SetCenter(x_ball,y_ball,0)
 		source.SetRadius(BALL_RAD)
 		spheres.append(source)
@@ -234,19 +267,20 @@ def animate(skeleton, ball, video):
 		input()
 
 
-# def main():
+def main():
 
-# 	npy_joint = "FACup_Hit_3.npy"
-# 	npy_ball = "scaled_FACup_Hit_3.npy"
-# 	video_file = "videos/FACup_Hit_3.mp4"
+	npy_joint = "FACup_Hit_3.npy"
+	npy_ball = "scaled_FACup_Hit_3.npy"
+	video_file = "videos/FACup_Hit_3.mp4"
 
-# 	joint = np.load(npy_joint)
-# 	ball = np.load(npy_ball)
+	joint = np.load(npy_joint)
+	ball = np.load(npy_ball)
 
-# 	animate(joint[:-1],ball[:-1],video_file)
+	print(joint[:][:-1].shape, ' is the original shape of the joint')
+	animate(joint[:][:-1],ball[:-1],video_file)
 
 
-# main()
+main()
 
 
 
